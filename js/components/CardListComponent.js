@@ -15,7 +15,7 @@ export default class CardListComponent extends AbstractComponent {
             <div id=${this.id} class="CardList">
                 <div id=${this.getRefId('loader')} class="loader${this.loading ? ' loading' : ''}">Loading...</div>
                 <ul id=${this.getRefId('cardList')} class=${this.loading ? 'hidden' : null}>
-                    ${this.getCards().toString()}
+                    ${this.getCards()}
                 </ul>
             </div>
         `;
