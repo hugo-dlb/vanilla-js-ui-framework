@@ -1,7 +1,7 @@
 export default class AbstractComponent {
 
     /**
-     * The Component class is the core of the Pure framework.
+     * The AbstractComponent class is the core of the Pure framework.
      * Every UI element should extend this class.
      */
     constructor() {
