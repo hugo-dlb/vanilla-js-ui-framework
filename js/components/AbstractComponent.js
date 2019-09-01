@@ -4,9 +4,89 @@ export default class AbstractComponent {
      * The AbstractComponent class is the core of the framework.
      * Every UI element should extend this class.
      */
-    constructor() {
-        this.id = this.generateUUID();
+    constructor(oDescriptor, oParameters) {
+        this.applyDescriptor(oDescriptor);
+        this.applyParameters(oParameters);
+        this.init();
     }
+
+    /**
+     * Creates the component properties getter and setters, aggregations and
+     * events based on the given descriptor object.
+     * 
+     * @param {any} oDescriptor The component descriptor containing the properties,
+     * aggregations and events
+     */
+    applyDescriptor(oDescriptor) {
+        oDescriptor = oDescriptor || {};
+        this.descriptor = oDescriptor;
+        const oProperties = oDescriptor.properties || {};
+
+        // Adds the id property if it is not defined
+        if (oProperties.id === undefined) {
+            oProperties.id = {
+                defaultValue: this.generateUUID()
+            };
+        }
+
+        Object.keys(oProperties).forEach((sProperty) => {
+
+            // Initialize the property
+            this[`_${sProperty}`] = oProperties[sProperty].defaultValue || null;
+
+            // Create getter method
+            if (this[`get${this.capitalizeFirstLetter(sProperty)}`] === undefined) {
+                this[`get${this.capitalizeFirstLetter(sProperty)}`] = () => {
+                    return this[`_${sProperty}`];
+                }
+            }
+
+            // Create setter method
+            if (this[`set${this.capitalizeFirstLetter(sProperty)}`] === undefined) {
+                this[`set${this.capitalizeFirstLetter(sProperty)}`] = (oValue) => {
+                    this[`_${sProperty}`] = oValue;
+                    const bPreventRerendering = oProperties[sProperty].preventRerendering;
+                    if (bPreventRerendering !== undefined && !bPreventRerendering) {
+                        this.reRender();
+                    }
+                    return this;
+                }
+            }
+        });
+
+        const oAggregations = oDescriptor.aggregations || {};
+        Object.keys(oAggregations).forEach((sAggregation) => {
+            this.createAggregation(sAggregation, oAggregations[sAggregation].ref);
+        });
+    }
+
+    /**
+     * Populates the component with the given parameters.
+     * 
+     * @param {any} oParameters The component parameters
+     */
+    applyParameters(oParameters) {
+        oParameters = oParameters || {};
+
+        for (const sParameter of Object.keys(oParameters)) {
+            const oDescriptor = this.descriptor;
+            const oProperties = oDescriptor.properties || {};
+
+            for (const sProperty of Object.keys(oProperties)) {
+                if (sParameter === sProperty) {
+                    this[`_${sProperty}`] = oParameters[sParameter];
+                    break;
+                }
+            }
+        }
+
+    }
+
+    /**
+     * The component inititialization method.
+     * UI Components should be created here.
+     */
+    init() { }
 
     /**
      * The component rendering method.
@@ -16,6 +96,25 @@ export default class AbstractComponent {
      */
     render() {
         return '';
+    }
+
+    /**
+     * Rerenders the component.
+     */
+    reRender() {
+        const oRef = this.getDomRef();
+        if (oRef) {
+            oRef.outerHTML = this.toString();
+        }
+    }
+
+    /**
+     * Inserts the component in the given DOM element.
+     * 
+     * @param {Element} oDomRef The DOM element
+     */
+    placeAt(oDomRef) {
+        oDomRef.innerHTML = this.toString();
     }
 
     /**
@@ -39,16 +138,16 @@ export default class AbstractComponent {
         this[`get${this.capitalizeFirstLetter(sAggregation)}`] = () => {
             return this[`_${sAggregation}`];
         }
-        
+
         // Create setter method to set the aggregations array
-        this[`set${this.capitalizeFirstLetter(sAggregation)}`] = (aCards) => {
-            aCards.toString = function() {
+        this[`set${this.capitalizeFirstLetter(sAggregation)}`] = (aAggregations) => {
+            aAggregations.toString = function () {
                 return this.join('');
             };
-            this[`_${sAggregation}`] = aCards;
+            this[`_${sAggregation}`] = aAggregations;
             const oRef = this.getRef(sDomRef);
             if (oRef) {
-                oRef.innerHTML = aCards.join('');
+                oRef.innerHTML = aAggregations.join('');
             }
         }
 
@@ -90,15 +189,6 @@ export default class AbstractComponent {
     }
 
     /**
-     * Retrieves a reference id based on the given name.
-     * 
-     * @returns {string} sReferenceName The reference id
-     */
-    getRefId(sReferenceName) {
-        return `${this.id}-${sReferenceName}`;
-    }
-
-    /**
      * Retrieves a reference DOM element based on the given reference name.
      * 
      * @param {string} sReferenceName The reference name
@@ -118,7 +208,7 @@ export default class AbstractComponent {
      * @returns {Element} This instance element
      */
     getDomRef() {
-        return document.getElementById(this.id);
+        return document.getElementById(this.getId());
     }
 
     /**

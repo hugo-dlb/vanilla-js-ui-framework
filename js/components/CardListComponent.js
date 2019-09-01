@@ -3,24 +3,37 @@ import AbstractComponent from './AbstractComponent.js';
 export default class CardListComponent extends AbstractComponent {
 
     constructor(parameters) {
-        super();
-        parameters = parameters || {};
-        this.loading = parameters.loading || false;
-        this.createAggregation('cards', 'cardList');
-        this.setCards(parameters.cards || []);
+        super({
+            properties: {
+                loading: {
+                    defaultValue: false
+                }
+            },
+            aggregations: {
+                cards: {
+                    ref: 'cardList'
+                }
+            }
+        }, parameters);
     }
 
     render() {
         return `
-            <div id=${this.id} class="CardList">
-                <div ref="loader" class="loader${this.loading ? ' loading' : ''}">Loading...</div>
-                <ul ref="cardList" class=${this.loading ? 'hidden' : null}>
+            <div id=${this.getId()} class="CardList">
+                <div ref="loader" class="loader${this.getLoading() ? ' loading' : ''}">Loading...</div>
+                <ul ref="cardList" class=${this.getLoading() ? 'hidden' : null}>
                     ${this.getCards()}
                 </ul>
             </div>
         `;
     }
 
+    /**
+     * Sets the loading state of the list.
+     * Overrides the default setter for improved rendering performance.
+     * 
+     * @param {boolean} bLoading True if the list is loading
+     */
     setLoading(bLoading) {
         const oRef = this.getRef('loader');
         if (oRef) {
@@ -30,7 +43,7 @@ export default class CardListComponent extends AbstractComponent {
                 oRef.classList.remove('loading');
             }
         }
-        this.loading = bLoading;
+        this._loading = bLoading;
         return this;
     }
 }
