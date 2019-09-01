@@ -30,9 +30,9 @@ export default class AbstractComponent {
      * Automatically creates get, set, add and delete methods for the given aggregation name.
      * 
      * @param {string} sAggregation The aggregation plural name (e.g "items")
-     * @param {string} sDomRefId The DOM element id where the aggregation should be rendered
+     * @param {string} sDomRef The DOM element reference name where the aggregation should be rendered
      */
-    createAggregation(sAggregation, sDomRefId) {
+    createAggregation(sAggregation, sDomRef) {
         this[`_${sAggregation}`] = [];
 
         // Create getter method to get the aggregations array
@@ -46,7 +46,7 @@ export default class AbstractComponent {
                 return this.join('');
             };
             this[`_${sAggregation}`] = aCards;
-            const oRef = document.getElementById(sDomRefId);
+            const oRef = this.getRef(sDomRef);
             if (oRef) {
                 oRef.innerHTML = aCards.join('');
             }
@@ -55,7 +55,7 @@ export default class AbstractComponent {
         // Create add method to add the given aggregation to the aggregations array
         this[`add${this.capitalizeFirstLetter(sAggregation).slice(0, -1)}`] = (oAggregation) => {
             this[`_${sAggregation}`].push(oAggregation);
-            const oRef = document.getElementById(sDomRefId);
+            const oRef = this.getRef(sDomRef);
             if (oRef) {
                 oRef.insertAdjacentHTML('beforeend', oAggregation);
             }
@@ -71,7 +71,7 @@ export default class AbstractComponent {
                     break;
                 }
             }
-            const oRef = document.getElementById(sDomRefId);
+            const oRef = this.getRef(sDomRef);
             if (oRef) {
                 oRef.parentNode.removeChild(oRef);
             }
@@ -99,13 +99,17 @@ export default class AbstractComponent {
     }
 
     /**
-     * Retrieves a reference DOM element based on the given name.
+     * Retrieves a reference DOM element based on the given reference name.
      * 
      * @param {string} sReferenceName The reference name
      * @returns {Element} The DOM element
      */
     getRef(sReferenceName) {
-        return document.getElementById(`${this.id}-${sReferenceName}`);
+        const oRef = this.getDomRef();
+        if (oRef) {
+            return oRef.querySelector(`[ref=${sReferenceName}]`);
+        }
+        return null;
     }
 
     /**

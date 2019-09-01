@@ -6,15 +6,15 @@ export default class CardListComponent extends AbstractComponent {
         super();
         parameters = parameters || {};
         this.loading = parameters.loading || false;
-        this.createAggregation('cards', this.getRefId('cardList'));
+        this.createAggregation('cards', 'cardList');
         this.setCards(parameters.cards || []);
     }
 
     render() {
         return `
             <div id=${this.id} class="CardList">
-                <div id=${this.getRefId('loader')} class="loader${this.loading ? ' loading' : ''}">Loading...</div>
-                <ul id=${this.getRefId('cardList')} class=${this.loading ? 'hidden' : null}>
+                <div ref="loader" class="loader${this.loading ? ' loading' : ''}">Loading...</div>
+                <ul ref="cardList" class=${this.loading ? 'hidden' : null}>
                     ${this.getCards()}
                 </ul>
             </div>
