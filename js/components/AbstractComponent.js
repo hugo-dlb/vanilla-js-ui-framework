@@ -30,33 +30,17 @@ export default class AbstractComponent {
         }
 
         Object.keys(oProperties).forEach((sProperty) => {
-
-            // Initialize the property
-            this[`_${sProperty}`] = oProperties[sProperty].defaultValue || null;
-
-            // Create getter method
-            if (this[`get${this.capitalizeFirstLetter(sProperty)}`] === undefined) {
-                this[`get${this.capitalizeFirstLetter(sProperty)}`] = () => {
-                    return this[`_${sProperty}`];
-                }
-            }
-
-            // Create setter method
-            if (this[`set${this.capitalizeFirstLetter(sProperty)}`] === undefined) {
-                this[`set${this.capitalizeFirstLetter(sProperty)}`] = (oValue) => {
-                    this[`_${sProperty}`] = oValue;
-                    const bPreventRerendering = oProperties[sProperty].preventRerendering;
-                    if (bPreventRerendering !== undefined && !bPreventRerendering) {
-                        this.reRender();
-                    }
-                    return this;
-                }
-            }
+            this.createProperty(sProperty);
         });
 
         const oAggregations = oDescriptor.aggregations || {};
         Object.keys(oAggregations).forEach((sAggregation) => {
             this.createAggregation(sAggregation, oAggregations[sAggregation].ref);
+        });
+
+        const oEvents = oDescriptor.events || {};
+        Object.keys(oEvents).forEach((sEvent) => {
+            this.createEvent(sEvent);
         });
     }
 
@@ -74,9 +58,16 @@ export default class AbstractComponent {
             const aProperties = Object.keys(oProperties);
             const oAggregations = oDescriptor.aggregations || {};
             const aAggregations = Object.keys(oAggregations);
+            const oEvents = oDescriptor.events || {};
+            const aEvents = Object.keys(oEvents);
 
             if (aProperties.indexOf(sParameter) > -1 || aAggregations.indexOf(sParameter) > -1) {
                 this[`_${sParameter}`] = oParameters[sParameter];
+            } else if (aEvents.indexOf(sParameter) > -1) {
+                const fnEvent = oParameters[sParameter];
+                if (typeof fnEvent === 'function') {
+                    this[`_${sParameter}`].push(fnEvent);
+                }
             }
         }
     }
@@ -95,32 +86,6 @@ export default class AbstractComponent {
      */
     render() {
         return '';
-    }
-
-    /**
-     * Rerenders the component.
-     */
-    reRender() {
-        const oRef = this.getDomRef();
-        if (oRef) {
-            oRef.outerHTML = this.toString();
-        }
-    }
-
-    /**
-     * Inserts the component in the given DOM element.
-     * 
-     * @param {Element} oDomRef The DOM element
-     */
-    placeAt(oDomRef) {
-        oDomRef.innerHTML = this.toString();
-    }
-
-    /**
-     * Returns the trimmed component HTML content.
-     */
-    toString() {
-        return this.render().trim();
     }
 
     /**
@@ -155,7 +120,7 @@ export default class AbstractComponent {
             this[`_${sAggregation}`].push(oAggregation);
             const oRef = this.getRef(sDomRef);
             if (oRef) {
-                oRef.insertAdjacentHTML('beforeend', oAggregation);
+                oRef.insertAdjacentHTML('beforeEnd', oAggregation);
             }
         }
 
@@ -171,20 +136,90 @@ export default class AbstractComponent {
             }
             const oRef = this.getRef(sDomRef);
             if (oRef) {
-                oRef.parentNode.removeChild(oRef);
+                oRef.removeChild(oAggregation.getDomRef());
+            }
+        }
+
+        // Create insert at method to insert the given aggregation at the given index to the aggregations array
+        this[`insert${this.capitalizeFirstLetter(sAggregation).slice(0, -1)}At`] = (iIndex, oAggregation) => {
+            const aAggregations = this[`_${sAggregation}`];
+            if (iIndex >= aAggregations.length) {
+                const oPreviousAggregation = aAggregations[aAggregations.length - 1];
+                const oRef = oPreviousAggregation.getDomRef();
+                if (oRef) {
+                    oRef.insertAdjacentHTML('afterEnd', oAggregation);
+                }
+                this[`_${sAggregation}`].push(oAggregation);
+            } else {
+                const oPreviousAggregation = aAggregations[iIndex];
+                const oRef = oPreviousAggregation.getDomRef();
+                if (oRef) {
+                    oRef.insertAdjacentHTML('beforeBegin', oAggregation);
+                }
+                this[`_${sAggregation}`].splice(iIndex, 0, oAggregation);
+            }
+        }
+
+        // Create remove at method to remove the aggregation at the given index from the aggregations array
+        this[`remove${this.capitalizeFirstLetter(sAggregation).slice(0, -1)}At`] = (iIndex) => {
+            const oAggregation = this[`_${sAggregation}`][iIndex];
+            if (oAggregation) {
+                this[`remove${this.capitalizeFirstLetter(sAggregation).slice(0, -1)}`](oAggregation);
             }
         }
     }
 
     /**
-     * Generates a uuid.
+     * Creates an event which is an array of callbacks.
      * 
-     * @returns {string} The uuid
+     * @param {string} sEvent The event name
      */
-    generateUUID() {
-        return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
-            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-        )
+    createEvent(sEvent) {
+        this[`_${sEvent}`] = [];
+    }
+
+    /**
+     * Creates a property.
+     * Automatically creates get and set methods.
+     * 
+     * @param {string} sProperty The property name
+     */
+    createProperty(sProperty) {
+        const oDescriptor = this.descriptor;
+        const oProperties = oDescriptor.properties || {};
+
+        // Initialize the property
+        this[`_${sProperty}`] = oProperties[sProperty].defaultValue || null;
+
+        // Create getter method
+        if (this[`get${this.capitalizeFirstLetter(sProperty)}`] === undefined) {
+            this[`get${this.capitalizeFirstLetter(sProperty)}`] = () => {
+                return this[`_${sProperty}`];
+            }
+        }
+
+        // Create setter method
+        if (this[`set${this.capitalizeFirstLetter(sProperty)}`] === undefined) {
+            this[`set${this.capitalizeFirstLetter(sProperty)}`] = (oValue) => {
+                this[`_${sProperty}`] = oValue;
+                const bPreventRerendering = oProperties[sProperty].preventRerendering;
+                if (!bPreventRerendering) {
+                    this.reRender();
+                }
+                return this;
+            }
+        }
+    }
+
+    fireEvent(sEvent, oData) {
+        const oEvents = this.descriptor.events || {};
+        const aEvents = Object.keys(oEvents);
+        if (aEvents.indexOf(sEvent) > -1) {
+            const aEventListeners = this[`_${sEvent}`];
+            if (typeof aEventListeners instanceof Array) {
+                aEventListeners.forEach(fnListener => fnListener(oData));
+            }
+        }
     }
 
     /**
@@ -208,6 +243,43 @@ export default class AbstractComponent {
      */
     getDomRef() {
         return document.getElementById(this.getId());
+    }
+
+    /**
+     * Rerenders the component.
+     */
+    reRender() {
+        const oRef = this.getDomRef();
+        if (oRef) {
+            oRef.outerHTML = this.toString();
+        }
+    }
+
+    /**
+     * Inserts the component in the given DOM element.
+     * 
+     * @param {Element} oDomRef The DOM element
+     */
+    placeAt(oDomRef) {
+        oDomRef.innerHTML = this.toString();
+    }
+
+    /**
+     * Returns the trimmed component HTML content.
+     */
+    toString() {
+        return this.render().trim();
+    }
+
+    /**
+     * Generates a uuid.
+     * 
+     * @returns {string} The uuid
+     */
+    generateUUID() {
+        return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+        )
     }
 
     /**
