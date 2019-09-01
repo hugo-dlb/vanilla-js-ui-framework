@@ -71,15 +71,14 @@ export default class AbstractComponent {
         for (const sParameter of Object.keys(oParameters)) {
             const oDescriptor = this.descriptor;
             const oProperties = oDescriptor.properties || {};
+            const aProperties = Object.keys(oProperties);
+            const oAggregations = oDescriptor.aggregations || {};
+            const aAggregations = Object.keys(oAggregations);
 
-            for (const sProperty of Object.keys(oProperties)) {
-                if (sParameter === sProperty) {
-                    this[`_${sProperty}`] = oParameters[sParameter];
-                    break;
-                }
+            if (aProperties.indexOf(sParameter) > -1 || aAggregations.indexOf(sParameter) > -1) {
+                this[`_${sParameter}`] = oParameters[sParameter];
             }
         }
-
     }
 
     /**
