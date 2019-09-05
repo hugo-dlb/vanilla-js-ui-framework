@@ -21,4 +21,12 @@ export default class CardComponent extends AbstractComponent {
             </li>
         `;
     }
+
+    afterRender() {
+        this.getDomRef().onclick = this.handleClick;
+    }
+
+    handleClick() {
+        console.log('Hello world!');
+    }
 }

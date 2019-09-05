@@ -89,12 +89,74 @@ export default class AbstractComponent {
     }
 
     /**
-     * Creates an aggregation which is an array of Components.
-     * Automatically creates get, set, add and delete methods for the given aggregation name.
-     * 
-     * @param {string} sAggregation The aggregation plural name (e.g "items")
-     * @param {string} sDomRef The DOM element reference name where the aggregation should be rendered
+     * Lifecycle hook called after the toString method which is used for
+     * rendering the component.
+     * This method should be overriden and anything that relies on the DOM
+     * (e.g. creating event listeners) should be called here.
      */
+    afterRender() { }
+
+    /**
+     * Rerenders the component.
+     */
+    reRender() {
+        const oRef = this.getDomRef();
+        if (oRef) {
+            oRef.outerHTML = this.toString();
+        }
+    }
+
+    /**
+     * Inserts the component in the given DOM element.
+     * 
+     * @param {Element} oDomRef The DOM element
+     */
+    placeAt(oDomRef) {
+        oDomRef.innerHTML = this.toString();
+    }
+
+    /**
+     * Returns the trimmed component HTML content.
+     */
+    toString() {
+        setTimeout(() => {
+            if (this.getDomRef()) {
+                this.afterRender();
+            }
+        }, 0);
+        return this.render().trim();
+    }
+
+    /**
+     * Retrieves a reference DOM element based on the given reference name.
+     * 
+     * @param {string} sReferenceName The reference name
+     * @returns {Element} The DOM element
+     */
+    getRef(sReferenceName) {
+        const oRef = this.getDomRef();
+        if (oRef) {
+            return oRef.querySelector(`[ref=${sReferenceName}]`);
+        }
+        return null;
+    }
+
+    /**
+     * Retrieves this instance reference in the DOM.
+     * 
+     * @returns {Element} This instance element
+     */
+    getDomRef() {
+        return document.getElementById(this.getId());
+    }
+
+    /**
+         * Creates an aggregation which is an array of Components.
+         * Automatically creates get, set, add and delete methods for the given aggregation name.
+         * 
+         * @param {string} sAggregation The aggregation plural name (e.g "items")
+         * @param {string} sDomRef The DOM element reference name where the aggregation should be rendered
+         */
     createAggregation(sAggregation, sDomRef) {
         this[`_${sAggregation}`] = [];
 
@@ -220,55 +282,6 @@ export default class AbstractComponent {
                 aEventListeners.forEach(fnListener => fnListener(oData));
             }
         }
-    }
-
-    /**
-     * Retrieves a reference DOM element based on the given reference name.
-     * 
-     * @param {string} sReferenceName The reference name
-     * @returns {Element} The DOM element
-     */
-    getRef(sReferenceName) {
-        const oRef = this.getDomRef();
-        if (oRef) {
-            return oRef.querySelector(`[ref=${sReferenceName}]`);
-        }
-        return null;
-    }
-
-    /**
-     * Retrieves this instance reference in the DOM.
-     * 
-     * @returns {Element} This instance element
-     */
-    getDomRef() {
-        return document.getElementById(this.getId());
-    }
-
-    /**
-     * Rerenders the component.
-     */
-    reRender() {
-        const oRef = this.getDomRef();
-        if (oRef) {
-            oRef.outerHTML = this.toString();
-        }
-    }
-
-    /**
-     * Inserts the component in the given DOM element.
-     * 
-     * @param {Element} oDomRef The DOM element
-     */
-    placeAt(oDomRef) {
-        oDomRef.innerHTML = this.toString();
-    }
-
-    /**
-     * Returns the trimmed component HTML content.
-     */
-    toString() {
-        return this.render().trim();
     }
 
     /**
